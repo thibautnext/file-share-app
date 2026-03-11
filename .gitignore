@@ -41,3 +41,4 @@ lerna-debug.log*
 /uploads
 /tmp
 .vercel
+.env*.local

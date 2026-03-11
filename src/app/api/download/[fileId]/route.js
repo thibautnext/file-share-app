@@ -6,9 +6,8 @@ export async function GET(request, { params }) {
   try {
     const { fileId } = params
 
-    // Get file data and metadata
     const result = await query(
-      `SELECT id, filename, size, file_data, expires_at, password_hash
+      `SELECT id, filename, size, blob_url, expires_at, password_hash
        FROM shared_files
        WHERE id = $1 AND expires_at > NOW() AND deleted_at IS NULL`,
       [fileId]
@@ -50,13 +49,20 @@ export async function GET(request, { params }) {
       [fileId]
     )
 
-    // Return file data
-    const buffer = file.file_data
-    return new NextResponse(buffer, {
+    // Fetch from Vercel Blob and stream back with correct filename
+    const blobResponse = await fetch(file.blob_url)
+    if (!blobResponse.ok) {
+      return NextResponse.json(
+        { message: 'Error fetching file from storage' },
+        { status: 500 }
+      )
+    }
+
+    return new NextResponse(blobResponse.body, {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${file.filename}"`,
-        'Content-Length': String(buffer.length),
+        'Content-Length': String(file.size),
       },
     })
   } catch (error) {

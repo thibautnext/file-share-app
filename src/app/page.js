@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
+import { upload } from '@vercel/blob/client'
 import UploadZone from '@/components/UploadZone'
 import UploadProgress from '@/components/UploadProgress'
 
@@ -15,31 +16,23 @@ export default function Home() {
     setError('')
     setUploading(true)
 
-    const formData = new FormData()
-    formData.append('file', file)
-    if (usePassword && password) {
-      formData.append('password', password)
-    }
-
     try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const clientPayload = JSON.stringify({
+        password: usePassword ? password : null,
       })
 
-      const bodyText = await response.text()
-      let data
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        clientPayload,
+      })
 
-      try {
-        data = JSON.parse(bodyText)
-      } catch (parseErr) {
-        console.error('Response text:', bodyText)
-        throw new Error(`Server error: ${bodyText.substring(0, 100)}`)
+      // Extract fileId from tokenPayload via a lookup by blob URL
+      const infoResponse = await fetch(`/api/upload/info?blobUrl=${encodeURIComponent(blob.url)}`)
+      if (!infoResponse.ok) {
+        throw new Error('Failed to get file info after upload')
       }
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Upload failed')
-      }
+      const data = await infoResponse.json()
 
       setUploadedFile(data)
       setPassword('')
@@ -60,7 +53,7 @@ export default function Home() {
             <div className="text-4xl mb-4">✅</div>
             <h2 className="text-2xl font-bold text-green-600 mb-4">Fichier uploadé avec succès!</h2>
             <p className="text-gray-600 mb-6">Partagez ce lien avec vos destinataires:</p>
-            
+
             <div className="bg-gray-100 p-4 rounded-lg mb-6 break-all">
               <code className="font-mono text-sm">
                 {`${typeof window !== 'undefined' ? window.location.origin : ''}/upload/${uploadedFile.fileId}`}
@@ -68,7 +61,7 @@ export default function Home() {
             </div>
 
             {uploadedFile.protected && (
-              <p className="text-amber-600 mb-4 text-sm">⚠️ Ce fichier est protégé par un mot de passe</p>
+              <p className="text-amber-600 mb-4 text-sm">Ce fichier est protégé par un mot de passe</p>
             )}
 
             <p className="text-gray-500 text-sm mb-6">
@@ -87,7 +80,7 @@ export default function Home() {
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-xl font-semibold mb-6 text-gray-800">Uploadez votre fichier</h2>
-            
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                 {error}
@@ -136,12 +129,12 @@ export default function Home() {
           {uploading && <UploadProgress />}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-900 mb-3">📋 Fonctionnalités</h3>
+            <h3 className="font-semibold text-blue-900 mb-3">Fonctionnalités</h3>
             <ul className="space-y-2 text-sm text-blue-900">
-              <li>✓ Upload de fichiers jusqu'à 100MB</li>
-              <li>✓ Protection optionnelle par mot de passe</li>
-              <li>✓ Suppression automatique après 24 heures</li>
-              <li>✓ Lien de partage unique et sécurisé</li>
+              <li>Upload de fichiers jusqu'à 100MB</li>
+              <li>Protection optionnelle par mot de passe</li>
+              <li>Suppression automatique après 24 heures</li>
+              <li>Lien de partage unique et sécurisé</li>
             </ul>
           </div>
         </div>

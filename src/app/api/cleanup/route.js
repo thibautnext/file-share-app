@@ -1,8 +1,8 @@
 import { query } from '@/lib/db'
+import { del } from '@vercel/blob'
 import { NextResponse } from 'next/server'
 
 export async function POST(request) {
-  // Verify cron secret
   const secret = request.headers.get('x-cron-secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json(
@@ -12,12 +12,23 @@ export async function POST(request) {
   }
 
   try {
-    // Delete expired files directly from database (files are stored as BYTEA)
+    // Get expired files with their blob URLs
     const result = await query(
       `DELETE FROM shared_files
        WHERE expires_at <= NOW()
-       RETURNING id, filename`
+       RETURNING id, filename, blob_url`
     )
+
+    // Delete blobs from Vercel Blob storage
+    for (const file of result.rows) {
+      if (file.blob_url) {
+        try {
+          await del(file.blob_url)
+        } catch (err) {
+          console.warn(`Failed to delete blob for ${file.id}:`, err.message)
+        }
+      }
+    }
 
     return NextResponse.json({
       message: `Cleaned up ${result.rows.length} expired files`,
@@ -32,7 +43,6 @@ export async function POST(request) {
   }
 }
 
-// Also support GET for easy testing
 export async function GET(request) {
   const secret = request.nextUrl.searchParams.get('secret')
   if (secret !== process.env.CRON_SECRET) {

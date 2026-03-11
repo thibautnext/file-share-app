@@ -16,7 +16,7 @@ async function migrate() {
         id VARCHAR(12) PRIMARY KEY,
         filename VARCHAR(255) NOT NULL,
         size BIGINT NOT NULL,
-        file_data BYTEA NOT NULL,
+        blob_url TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         expires_at TIMESTAMP NOT NULL,
         password_hash VARCHAR(255),
@@ -28,35 +28,40 @@ async function migrate() {
       );
     `)
 
-    // Add file_data column if missing
+    // Add blob_url column if missing
     await client.query(`
-      ALTER TABLE shared_files 
-      ADD COLUMN IF NOT EXISTS file_data BYTEA;
+      ALTER TABLE shared_files
+      ADD COLUMN IF NOT EXISTS blob_url TEXT;
     `)
 
-    // Drop blob_url if it exists
+    // Make file_data nullable (no longer required)
     await client.query(`
-      ALTER TABLE shared_files 
-      DROP COLUMN IF EXISTS blob_url;
+      ALTER TABLE shared_files
+      ALTER COLUMN file_data DROP NOT NULL;
     `)
 
     // Create indexes
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_shared_files_expires_at 
+      CREATE INDEX IF NOT EXISTS idx_shared_files_expires_at
       ON shared_files(expires_at);
     `)
 
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_shared_files_created_at 
+      CREATE INDEX IF NOT EXISTS idx_shared_files_created_at
       ON shared_files(created_at);
     `)
 
-    console.log('✅ Migrations completed successfully!')
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_shared_files_blob_url
+      ON shared_files(blob_url);
+    `)
+
+    console.log('Migrations completed successfully!')
   } catch (error) {
-    console.error('❌ Migration failed:', error)
+    console.error('Migration failed:', error)
     process.exit(1)
   } finally {
-    await client.release()
+    client.release()
     await pool.end()
   }
 }

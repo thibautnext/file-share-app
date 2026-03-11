@@ -1,4 +1,5 @@
 import { query } from '@/lib/db'
+import { del } from '@vercel/blob'
 import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
 
@@ -6,9 +7,8 @@ export async function DELETE(request, { params }) {
   try {
     const { fileId } = params
 
-    // Check if file exists and if it's password protected
     const checkResult = await query(
-      `SELECT id, filename, password_hash
+      `SELECT id, filename, password_hash, blob_url
        FROM shared_files
        WHERE id = $1 AND deleted_at IS NULL`,
       [fileId]
@@ -42,7 +42,16 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    // Delete the file
+    // Delete from Vercel Blob
+    if (file.blob_url) {
+      try {
+        await del(file.blob_url)
+      } catch (err) {
+        console.warn(`Failed to delete blob for ${file.id}:`, err.message)
+      }
+    }
+
+    // Delete from database
     await query(
       `DELETE FROM shared_files WHERE id = $1`,
       [fileId]

@@ -10,14 +10,15 @@ async function cleanup() {
   try {
     console.log('Starting cleanup of expired files...')
 
-    // Delete expired files directly from database (files are stored as BYTEA)
     const result = await client.query(`
       DELETE FROM shared_files
       WHERE expires_at <= NOW()
-      RETURNING id, filename
+      RETURNING id, filename, blob_url
     `)
 
-    console.log(`Cleanup completed! Deleted ${result.rows.length} expired files`)
+    // Note: blob cleanup is handled by the API route via @vercel/blob del()
+    // This script only cleans the database
+    console.log(`Cleanup completed! Deleted ${result.rows.length} expired files from database`)
   } catch (error) {
     console.error('Cleanup failed:', error)
     process.exit(1)
