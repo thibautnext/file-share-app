@@ -5,9 +5,9 @@ export async function GET(request, { params }) {
   try {
     const { fileId } = params
 
-    // Get file metadata
+    // Get file data and metadata
     const result = await query(
-      `SELECT id, filename, size, blob_url, expires_at 
+      `SELECT id, filename, size, file_data, expires_at, password_hash
        FROM shared_files 
        WHERE id = $1 AND expires_at > NOW()`,
       [fileId]
@@ -30,10 +30,13 @@ export async function GET(request, { params }) {
       [fileId]
     )
 
-    // Redirect to Vercel Blob URL with download disposition
-    return NextResponse.redirect(file.blob_url, {
+    // Return file with proper headers
+    const buffer = file.file_data
+    return new NextResponse(buffer, {
       headers: {
+        'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${file.filename}"`,
+        'Content-Length': file.size,
       },
     })
   } catch (error) {
