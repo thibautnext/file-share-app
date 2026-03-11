@@ -1,6 +1,4 @@
 import { query } from '@/lib/db'
-import { unlink } from 'fs/promises'
-import { join } from 'path'
 import { NextResponse } from 'next/server'
 
 export async function POST(request) {
@@ -14,38 +12,16 @@ export async function POST(request) {
   }
 
   try {
-    // Find expired files
+    // Delete expired files directly from database (files are stored as BYTEA)
     const result = await query(
-      `SELECT id, filename FROM shared_files 
-       WHERE expires_at <= NOW() AND deleted_at IS NULL
-       LIMIT 1000`
+      `DELETE FROM shared_files
+       WHERE expires_at <= NOW()
+       RETURNING id, filename`
     )
 
-    const expiredFiles = result.rows
-
-    // Delete files from storage
-    const uploadDir = process.env.NAS_UPLOAD_PATH || '/tmp/uploads'
-    
-    for (const file of expiredFiles) {
-      try {
-        const filePath = join(uploadDir, file.id)
-        await unlink(filePath)
-      } catch (err) {
-        console.warn(`Failed to delete file ${file.id}:`, err)
-      }
-
-      // Mark as deleted in database
-      await query(
-        `UPDATE shared_files 
-         SET deleted_at = NOW()
-         WHERE id = $1`,
-        [file.id]
-      )
-    }
-
     return NextResponse.json({
-      message: `Cleaned up ${expiredFiles.length} expired files`,
-      deletedCount: expiredFiles.length,
+      message: `Cleaned up ${result.rows.length} expired files`,
+      deletedCount: result.rows.length,
     })
   } catch (error) {
     console.error('Cleanup error:', error)

@@ -1,28 +1,56 @@
 import { query } from '@/lib/db'
+import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
 
 export async function DELETE(request, { params }) {
   try {
     const { fileId } = params
 
-    // Delete the file
-    const result = await query(
-      `DELETE FROM shared_files 
-       WHERE id = $1
-       RETURNING id, filename`,
+    // Check if file exists and if it's password protected
+    const checkResult = await query(
+      `SELECT id, filename, password_hash
+       FROM shared_files
+       WHERE id = $1 AND deleted_at IS NULL`,
       [fileId]
     )
 
-    if (result.rows.length === 0) {
+    if (checkResult.rows.length === 0) {
       return NextResponse.json(
         { message: 'File not found' },
         { status: 404 }
       )
     }
 
+    const file = checkResult.rows[0]
+
+    // Verify password for protected files
+    if (file.password_hash) {
+      const url = new URL(request.url)
+      const token = url.searchParams.get('token')
+      if (!token) {
+        return NextResponse.json(
+          { message: 'Password required' },
+          { status: 401 }
+        )
+      }
+      const passwordMatch = await bcrypt.compare(token, file.password_hash)
+      if (!passwordMatch) {
+        return NextResponse.json(
+          { message: 'Invalid password' },
+          { status: 401 }
+        )
+      }
+    }
+
+    // Delete the file
+    await query(
+      `DELETE FROM shared_files WHERE id = $1`,
+      [fileId]
+    )
+
     return NextResponse.json({
       message: 'File deleted successfully',
-      filename: result.rows[0].filename,
+      filename: file.filename,
     })
   } catch (error) {
     console.error('Delete error:', error)

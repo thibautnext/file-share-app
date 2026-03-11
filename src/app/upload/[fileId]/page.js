@@ -14,6 +14,7 @@ export default function DownloadPage() {
   const [needsPassword, setNeedsPassword] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [passwordToken, setPasswordToken] = useState(null)
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -58,6 +59,7 @@ export default function DownloadPage() {
 
       const data = await response.json()
       setFile(data)
+      setPasswordToken(password)
       setNeedsPassword(false)
     } catch (err) {
       setError(err.message)
@@ -67,7 +69,10 @@ export default function DownloadPage() {
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      window.location.href = `/api/download/${fileId}`
+      const url = passwordToken
+        ? `/api/download/${fileId}?token=${encodeURIComponent(passwordToken)}`
+        : `/api/download/${fileId}`
+      window.location.href = url
     } catch (err) {
       setError(err.message)
     } finally {
@@ -82,7 +87,10 @@ export default function DownloadPage() {
 
     setDeleting(true)
     try {
-      const response = await fetch(`/api/delete/${fileId}`, {
+      const deleteUrl = passwordToken
+        ? `/api/delete/${fileId}?token=${encodeURIComponent(passwordToken)}`
+        : `/api/delete/${fileId}`
+      const response = await fetch(deleteUrl, {
         method: 'DELETE',
       })
 

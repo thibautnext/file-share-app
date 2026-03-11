@@ -7,9 +7,9 @@ export async function GET(request, { params }) {
     const { fileId } = params
 
     const result = await query(
-      `SELECT id, filename, size, created_at, expires_at, password_hash 
-       FROM shared_files 
-       WHERE id = $1 AND expires_at > NOW()`,
+      `SELECT id, filename, size, created_at, expires_at, password_hash
+       FROM shared_files
+       WHERE id = $1 AND expires_at > NOW() AND deleted_at IS NULL`,
       [fileId]
     )
 
@@ -58,9 +58,9 @@ export async function POST(request, { params }) {
     }
 
     const result = await query(
-      `SELECT id, filename, size, created_at, expires_at, password_hash 
-       FROM shared_files 
-       WHERE id = $1 AND expires_at > NOW()`,
+      `SELECT id, filename, size, created_at, expires_at, password_hash
+       FROM shared_files
+       WHERE id = $1 AND expires_at > NOW() AND deleted_at IS NULL`,
       [fileId]
     )
 

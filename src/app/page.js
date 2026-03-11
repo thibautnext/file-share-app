@@ -63,7 +63,7 @@ export default function Home() {
             
             <div className="bg-gray-100 p-4 rounded-lg mb-6 break-all">
               <code className="font-mono text-sm">
-                {`${process.env.NEXT_PUBLIC_APP_URL}/upload/${uploadedFile.fileId}`}
+                {`${typeof window !== 'undefined' ? window.location.origin : ''}/upload/${uploadedFile.fileId}`}
               </code>
             </div>
 
