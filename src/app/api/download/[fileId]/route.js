@@ -5,9 +5,9 @@ export async function GET(request, { params }) {
   try {
     const { fileId } = params
 
-    // Get file metadata
+    // Get file data and metadata
     const result = await query(
-      `SELECT id, filename, size, blob_url, expires_at
+      `SELECT id, filename, size, file_data, expires_at
        FROM shared_files 
        WHERE id = $1 AND expires_at > NOW()`,
       [fileId]
@@ -30,11 +30,8 @@ export async function GET(request, { params }) {
       [fileId]
     )
 
-    // Redirect to Blob URL for download
-    const response = await fetch(file.blob_url)
-    const blob = await response.blob()
-    
-    return new NextResponse(blob, {
+    // Return file data
+    return new NextResponse(file.file_data, {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${file.filename}"`,

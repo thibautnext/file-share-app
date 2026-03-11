@@ -16,7 +16,7 @@ async function migrate() {
         id VARCHAR(12) PRIMARY KEY,
         filename VARCHAR(255) NOT NULL,
         size BIGINT NOT NULL,
-        blob_url TEXT NOT NULL,
+        file_data BYTEA NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         expires_at TIMESTAMP NOT NULL,
         password_hash VARCHAR(255),
@@ -28,16 +28,16 @@ async function migrate() {
       );
     `)
 
-    // Add blob_url column if it doesn't exist
+    // Add file_data column if missing
     await client.query(`
       ALTER TABLE shared_files 
-      ADD COLUMN IF NOT EXISTS blob_url TEXT;
+      ADD COLUMN IF NOT EXISTS file_data BYTEA;
     `)
 
-    // Drop file_data if it exists (cleanup from old schema)
+    // Drop blob_url if it exists
     await client.query(`
       ALTER TABLE shared_files 
-      DROP COLUMN IF EXISTS file_data;
+      DROP COLUMN IF EXISTS blob_url;
     `)
 
     // Create indexes

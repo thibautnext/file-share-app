@@ -15,45 +15,33 @@ export default function Home() {
     setError('')
     setUploading(true)
 
-    try {
-      // Step 1: Upload file directly to Vercel Blob
-      const formData = new FormData()
-      formData.append('file', file)
+    const formData = new FormData()
+    formData.append('file', file)
+    if (usePassword && password) {
+      formData.append('password', password)
+    }
 
-      const blobResponse = await fetch('/api/blob-upload', {
+    try {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
 
-      if (!blobResponse.ok) {
-        const blobError = await blobResponse.json()
-        throw new Error(blobError.message || 'File upload to storage failed')
+      const bodyText = await response.text()
+      let data
+
+      try {
+        data = JSON.parse(bodyText)
+      } catch (parseErr) {
+        console.error('Response text:', bodyText)
+        throw new Error(`Server error: ${bodyText.substring(0, 100)}`)
       }
 
-      const blobData = await blobResponse.json()
-      const { blobUrl } = blobData
-
-      // Step 2: Register metadata in database
-      const metadataResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filename: file.name,
-          fileSize: file.size,
-          password: usePassword ? password : null,
-          blobUrl: blobUrl,
-        }),
-      })
-
-      if (!metadataResponse.ok) {
-        const metadataError = await metadataResponse.json()
-        throw new Error(metadataError.message || 'Failed to register file')
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed')
       }
 
-      const uploadedData = await metadataResponse.json()
-      setUploadedFile(uploadedData)
+      setUploadedFile(data)
       setPassword('')
       setUsePassword(false)
     } catch (err) {
