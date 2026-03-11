@@ -1,3 +1,4 @@
+import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import bcrypt from 'bcryptjs'
 import { query } from '@/lib/db'
@@ -37,15 +38,18 @@ export async function POST(request) {
       passwordHash = await bcrypt.hash(password, 10)
     }
 
-    // Convert file to Buffer
+    // Upload to Vercel Blob
     const buffer = Buffer.from(await file.arrayBuffer())
+    const blob = await put(`file-share/${fileId}`, buffer, {
+      access: 'public',
+    })
 
-    // Save to PostgreSQL BYTEA
+    // Save metadata to database
     await query(
       `INSERT INTO shared_files 
-        (id, filename, size, file_data, created_at, expires_at, password_hash, download_count)
+        (id, filename, size, blob_url, created_at, expires_at, password_hash, download_count)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [fileId, filename, fileSize, buffer, createdAt, expiresAt, passwordHash, 0]
+      [fileId, filename, fileSize, blob.url, createdAt, expiresAt, passwordHash, 0]
     )
 
     return NextResponse.json({
