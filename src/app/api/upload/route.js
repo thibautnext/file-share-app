@@ -1,11 +1,12 @@
 import { nanoid } from 'nanoid'
 import bcrypt from 'bcryptjs'
-import { query } from '@/lib/db'
+import { query, getClient } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
 export async function POST(request) {
+  let client
   try {
     const formData = await request.formData()
     const file = formData.get('file')
@@ -40,25 +41,19 @@ export async function POST(request) {
     // Read file as buffer
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // Save file + metadata to PostgreSQL in one transaction
-    const client = await query.pool.connect()
-    try {
-      await client.query('BEGIN')
-      
-      await client.query(
-        `INSERT INTO shared_files 
-          (id, filename, size, file_data, created_at, expires_at, password_hash, download_count)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [fileId, filename, fileSize, buffer, createdAt, expiresAt, passwordHash, 0]
-      )
+    // Save file + metadata to PostgreSQL in transaction
+    client = await getClient()
+    
+    await client.query('BEGIN')
+    
+    await client.query(
+      `INSERT INTO shared_files 
+        (id, filename, size, file_data, created_at, expires_at, password_hash, download_count)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [fileId, filename, fileSize, buffer, createdAt, expiresAt, passwordHash, 0]
+    )
 
-      await client.query('COMMIT')
-    } catch (err) {
-      await client.query('ROLLBACK')
-      throw err
-    } finally {
-      client.release()
-    }
+    await client.query('COMMIT')
 
     return NextResponse.json({
       fileId,
@@ -69,10 +64,17 @@ export async function POST(request) {
       expiresAt: expiresAt.toISOString(),
     })
   } catch (error) {
+    if (client) {
+      await client.query('ROLLBACK').catch(() => {})
+    }
     console.error('Upload error:', error)
     return NextResponse.json(
       { message: error.message || 'Upload failed' },
       { status: 500 }
     )
+  } finally {
+    if (client) {
+      client.release()
+    }
   }
 }
