@@ -27,16 +27,27 @@ export default function Home() {
         body: formData,
       })
 
+      const contentType = response.headers.get('content-type')
+      let data
+
+      try {
+        data = await response.json()
+      } catch (parseErr) {
+        // If JSON parsing fails, try to get text
+        const text = await response.text()
+        console.error('Response text:', text)
+        throw new Error(`Server error: ${text.substring(0, 100)}`)
+      }
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.message || 'Upload failed')
       }
 
-      const data = await response.json()
       setUploadedFile(data)
       setPassword('')
       setUsePassword(false)
     } catch (err) {
+      console.error('Upload error:', err)
       setError(err.message)
     } finally {
       setUploading(false)
