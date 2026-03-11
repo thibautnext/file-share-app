@@ -27,16 +27,17 @@ export default function Home() {
         body: formData,
       })
 
-      const contentType = response.headers.get('content-type')
       let data
-
+      
+      // Read body once as text first
+      const bodyText = await response.text()
+      
+      // Then try to parse as JSON
       try {
-        data = await response.json()
+        data = JSON.parse(bodyText)
       } catch (parseErr) {
-        // If JSON parsing fails, try to get text
-        const text = await response.text()
-        console.error('Response text:', text)
-        throw new Error(`Server error: ${text.substring(0, 100)}`)
+        console.error('Response text:', bodyText)
+        throw new Error(`Server error: ${bodyText.substring(0, 100)}`)
       }
 
       if (!response.ok) {
