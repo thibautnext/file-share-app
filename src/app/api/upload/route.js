@@ -22,7 +22,6 @@ export async function POST(request) {
 
         return {
           maximumSizeInBytes: 100 * 1024 * 1024, // 100MB
-          allowedContentTypes: ['*/*'],
           tokenPayload: JSON.stringify({
             fileId,
             passwordHash,
