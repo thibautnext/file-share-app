@@ -13,6 +13,7 @@ export default function DownloadPage() {
   const [error, setError] = useState('')
   const [needsPassword, setNeedsPassword] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -74,6 +75,33 @@ export default function DownloadPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce fichier ? Cette action est irréversible.')) {
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/delete/${fileId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Erreur lors de la suppression')
+      }
+
+      // Redirect to home after successful deletion
+      setTimeout(() => {
+        window.location.href = '/?deleted=true'
+      }, 500)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
@@ -113,6 +141,8 @@ export default function DownloadPage() {
           file={file}
           onDownload={handleDownload}
           downloading={downloading}
+          onDelete={handleDelete}
+          deleting={deleting}
         />
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 'use client'
 
-export default function FileDetails({ file, onDownload, downloading }) {
+export default function FileDetails({ file, onDownload, downloading, onDelete, deleting }) {
   const formatBytes = (bytes) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -81,9 +81,9 @@ export default function FileDetails({ file, onDownload, downloading }) {
         {/* Download Button */}
         <button
           onClick={onDownload}
-          disabled={downloading}
+          disabled={downloading || deleting}
           className={`w-full btn-primary py-3 text-lg font-semibold ${
-            downloading ? 'opacity-50 cursor-not-allowed' : ''
+            downloading || deleting ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
           {downloading ? (
@@ -93,6 +93,24 @@ export default function FileDetails({ file, onDownload, downloading }) {
             </span>
           ) : (
             <span>⬇️ Télécharger le fichier</span>
+          )}
+        </button>
+
+        {/* Delete Button */}
+        <button
+          onClick={onDelete}
+          disabled={downloading || deleting}
+          className={`w-full bg-red-500 hover:bg-red-600 text-white py-3 text-lg font-semibold rounded-lg transition ${
+            downloading || deleting ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+        >
+          {deleting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Suppression...
+            </span>
+          ) : (
+            <span>🗑️ Supprimer le fichier</span>
           )}
         </button>
 
