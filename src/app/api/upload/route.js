@@ -11,6 +11,7 @@ export async function POST(request) {
       onBeforeGenerateToken: async () => {
         return {
           maximumSizeInBytes: 100 * 1024 * 1024, // 100MB
+          addRandomSuffix: true,
         }
       },
       onUploadCompleted: async () => {
