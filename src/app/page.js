@@ -17,22 +17,26 @@ export default function Home() {
     setUploading(true)
 
     try {
-      const clientPayload = JSON.stringify({
-        password: usePassword ? password : null,
-      })
-
       const blob = await upload(file.name, file, {
         access: 'public',
         handleUploadUrl: '/api/upload',
-        clientPayload,
       })
 
-      // Extract fileId from tokenPayload via a lookup by blob URL
-      const infoResponse = await fetch(`/api/upload/info?blobUrl=${encodeURIComponent(blob.url)}`)
-      if (!infoResponse.ok) {
-        throw new Error('Failed to get file info after upload')
+      // Register the uploaded file in database
+      const registerResponse = await fetch('/api/upload/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blobUrl: blob.url,
+          filename: file.name,
+          size: file.size,
+          password: usePassword ? password : null,
+        }),
+      })
+      if (!registerResponse.ok) {
+        throw new Error('Failed to register file after upload')
       }
-      const data = await infoResponse.json()
+      const data = await registerResponse.json()
 
       setUploadedFile(data)
       setPassword('')
