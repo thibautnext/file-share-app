@@ -1,5 +1,3 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import { query } from '@/lib/db'
 import { NextResponse } from 'next/server'
 
@@ -9,7 +7,7 @@ export async function GET(request, { params }) {
 
     // Get file metadata
     const result = await query(
-      `SELECT id, filename, size, created_at, expires_at 
+      `SELECT id, filename, size, blob_url, expires_at 
        FROM shared_files 
        WHERE id = $1 AND expires_at > NOW()`,
       [fileId]
@@ -32,24 +30,10 @@ export async function GET(request, { params }) {
       [fileId]
     )
 
-    // Read file from storage
-    let fileBuffer
-    if (process.env.STORAGE_TYPE === 'vercel-blob') {
-      // TODO: Implement Vercel Blob download
-      throw new Error('Vercel Blob storage not yet implemented')
-    } else {
-      // Read from NAS
-      const uploadDir = process.env.NAS_UPLOAD_PATH || '/tmp/uploads'
-      const filePath = join(uploadDir, fileId)
-      fileBuffer = await readFile(filePath)
-    }
-
-    // Return file with proper headers
-    return new NextResponse(fileBuffer, {
+    // Redirect to Vercel Blob URL with download disposition
+    return NextResponse.redirect(file.blob_url, {
       headers: {
-        'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${file.filename}"`,
-        'Content-Length': file.size,
       },
     })
   } catch (error) {

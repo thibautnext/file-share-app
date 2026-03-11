@@ -1,5 +1,4 @@
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { put, del } from '@vercel/blob'
 import { nanoid } from 'nanoid'
 import bcrypt from 'bcryptjs'
 import { query } from '@/lib/db'
@@ -39,32 +38,19 @@ export async function POST(request) {
       passwordHash = await bcrypt.hash(password, 10)
     }
 
-    // Save file based on storage type
-    if (process.env.STORAGE_TYPE === 'vercel-blob') {
-      // TODO: Implement Vercel Blob storage
-      throw new Error('Vercel Blob storage not yet implemented')
-    } else {
-      // Save to NAS
-      const uploadDir = process.env.NAS_UPLOAD_PATH || '/tmp/uploads'
-      const filePath = join(uploadDir, fileId)
-
-      try {
-        await mkdir(uploadDir, { recursive: true })
-      } catch (err) {
-        // Directory might already exist
-      }
-
-      const buffer = await file.arrayBuffer()
-      await writeFile(filePath, Buffer.from(buffer))
-    }
+    // Save to Vercel Blob
+    const buffer = await file.arrayBuffer()
+    const blob = await put(`file-share/${fileId}`, Buffer.from(buffer), {
+      access: 'public',
+    })
 
     // Save metadata to database
-    const result = await query(
+    await query(
       `INSERT INTO shared_files 
-        (id, filename, size, created_at, expires_at, password_hash, download_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (id, filename, size, created_at, expires_at, password_hash, download_count, blob_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, filename, size, created_at, expires_at, password_hash`,
-      [fileId, filename, fileSize, createdAt, expiresAt, passwordHash, 0]
+      [fileId, filename, fileSize, createdAt, expiresAt, passwordHash, 0, blob.url]
     )
 
     return NextResponse.json({

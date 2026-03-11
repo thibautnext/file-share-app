@@ -11,19 +11,20 @@
     "cron": "node scripts/cleanup.js"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "next": "^14.2.0",
+    "@vercel/blob": "^2.3.1",
     "bcryptjs": "^2.4.3",
-    "pg": "^8.11.3",
+    "nanoid": "^4.0.2",
+    "next": "^14.2.0",
     "node-cron": "^3.0.3",
-    "nanoid": "^4.0.2"
+    "pg": "^8.11.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.3",
     "eslint": "^8.0.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3"
   }
 }

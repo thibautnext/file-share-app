@@ -23,8 +23,15 @@ async function migrate() {
         downloaded_at TIMESTAMP,
         deleted_at TIMESTAMP,
         created_ip VARCHAR(45),
-        user_agent TEXT
+        user_agent TEXT,
+        blob_url TEXT
       );
+    `)
+
+    // Add blob_url column if it doesn't exist
+    await client.query(`
+      ALTER TABLE shared_files 
+      ADD COLUMN IF NOT EXISTS blob_url TEXT;
     `)
 
     // Create indexes
